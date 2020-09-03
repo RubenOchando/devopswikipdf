@@ -7,13 +7,74 @@ trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'windows-latest'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+
 
 - script: |
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
+
+- task: PowerShell@2
+  displayName: 'Degug parameters'
+  inputs:
+    targetType: Inline
+    script: |
+      Write-Host "$(Build.ArtifactStagingDirectory)"
+      Write-Host "$(System.DefaultWorkingDirectory)"
+      Write-Host "$(System.ArtifactsDirectory)"
+      Write-Host "$(Pipeline.Workspace)"
+      Write-Host "$(System.ArtifactsDirectory)"
+      Get-ChildItem -Path $(System.DefaultWorkingDirectory) -recurse
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      Set-Location $(System.DefaultWorkingDirectory)
+      #Download url to the export tool
+      $url = "https://dev.azure.com/mmelcher/8036eca1-fd9e-4c0f-8bef-646b32fbda0b/_apis/git/repositories/e08d1ada-7794-4b89-a3ea-cb64a26683c3/Items?path=%2Fazuredevops-export-wiki.exe&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=master&download=true&resolveLfs=true&%24format=octetStream&api-version=5.0-preview.1"
+      #filename of the tool
+      $output = "azuredevops-export-wiki.exe"
+      #download the file
+      Invoke-WebRequest -Uri $url -OutFile $output
+      #launch the tool - adjust the parameters if required
+      ./azuredevops-export-wiki.exe 
+    errorActionPreference: 'continue'
+    pwsh: true
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+
+
+
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/azuredevops-export-wiki.exe'
+    ArtifactName: 'dropexe'
+    publishLocation: 'Container'
+
+
+
+
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: './azuredevops-export-wiki.exe'
+    errorActionPreference: 'continue'
+    pwsh: true
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+
+
+
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)\export.pdf'
+    ArtifactName: 'droppdf'
+    publishLocation: 'Container'
+
